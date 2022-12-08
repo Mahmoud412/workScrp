@@ -10,7 +10,7 @@ const fs = require("fs");
   ];
   const outputList = [];
 
-  const browser = await pup.launch({ headless: true });
+  const browser = await pup.launch({ headless:true });
 
   for (let i = 0; i < urls.length; i++) {
     const url = urls[i];
@@ -73,13 +73,3 @@ const fs = require("fs");
   await browser.close();
 })();
 
-// {
-//   "addresses": [
-//     "st. Linina, 15, Novosibirsk, 12345",
-//     "12345, c. Novosibirsk, st. Linina, 15",
-//     "st. Linina, 15, c. Novosibirsk, 112345, Russia, 123456",
-//     "st. Linina, 15, Novosibirsk, 112345, Russia, 123456",
-//     "c. Novosibirsk, st. Linina 15",
-//     "Novosibirsk, st. Linina 15"
-//   ]
-// },
