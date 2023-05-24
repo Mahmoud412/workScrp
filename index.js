@@ -1,75 +1,41 @@
-const pup = require("puppeteer");
-const fs = require("fs");
+const nodemailer = require("nodemailer");
+const credentialsData = require("./credentials.json");
+const messageData = require("./message.json");
+const emailsData = require("./emails.json");
 
-(async function () {
-  const urls = [
-    "https://www.festival-sochi.ru/en/home-page/",
-    "https://sochi.com/company-business/company/6562/493547/",
-    "https://sochi.com/company-business/company/6403/488386/",
-    "https://sochi.com/company-business/company/5737/488973/",
-  ];
-  const outputList = [];
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: credentialsData[0].email, // first email in credentials.json
+    pass: credentialsData[0].password, // password for first email
+  },
+});
 
-  const browser = await pup.launch({ headless:true });
+const sendMessages = async () => {
+  let emailIndex = 0;
+  for (let i = 0; i < credentialsData.length; i++) {
+    const { email, password } = credentialsData[i];
+    transporter.set("auth", { user: email, pass: password });
 
-  for (let i = 0; i < urls.length; i++) {
-    const url = urls[i];
-    console.log(`scraping results from ${url}`);
-    const page = await browser.newPage();
-    await page.goto(url);
-
-    const data = await page.evaluate(function () {
-      function extractEmails(text) {
-        const emails = new Set();
-        const matches = text.match(
-          /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi
-        );
-        if (matches != null) {
-          matches.forEach((e) => emails.add(e));
-        }
-        return emails;
+    for (let j = 0; j < 10; j++) {
+      for (let k = 0; k < 5; k++) {
+        const messageIndex = j * 5 + k;
+        const { subject, text } = messageData[messageIndex];
+        const recipient = emailsData[emailIndex];
+        const mailOptions = {
+          from: email,
+          to: recipient,
+          subject,
+          text,
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent from ${email} to ${recipient}`);
+        emailIndex = (emailIndex + 1) % emailsData.length;
       }
-      function extractPhoneNumbers(text) {
-        const phones = new Set();
-        const matches = text.match(
-          /(8|7|\+7)((\d{10})|(\s\(\d{3}\)\s\d{3}(\s|\-)?\d{2}(\s|\-)?\d{2}))/g
-        );
-        if (matches != null) {
-          matches.forEach((e) => phones.add(e));
-        }
-        return phones;
-      }
-
-      let html = document.body.innerHTML.toString();
-      var emails = extractEmails(html);
-      var phones = extractPhoneNumbers(html);
-      console.log(phones);
-
-      return {
-        phones: Array.from(phones),
-        emails: Array.from(emails),
-      };
-    });
-
-    console.log(data);
-    console.log("--------------------------------------------------\n");
-
-    const item = {};
-    item[url] = data;
-    outputList.push(item);
-  }
-
-  const output = JSON.stringify(outputList);
-  const outputFile = "./output.json";
-  if (fs.existsSync(outputFile)) {
-    fs.rmSync(outputFile);
-  }
-  fs.writeFile("./output.json", output, "utf8", function (err) {
-    if (err) {
-      return console.log(err);
     }
-  });
+  }
+};
 
-  await browser.close();
-})();
-
+sendMessages();
